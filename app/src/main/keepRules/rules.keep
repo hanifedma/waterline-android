@@ -1,0 +1,19 @@
+# Add project specific R8 rules here.
+# AGP combines every keep rule file in src/main/keepRules and passes them to R8.
+#
+# For more details, see
+#   https://d.android.com/r/tools/r8/keep-rules
+
+# WorkManager builds Workers by reflection, from the class name it persisted in
+# its own database — nothing in our code ever constructs one. R8 sees that,
+# keeps the class (its name is written into the work request) and strips the
+# constructor, which fails only at runtime and only in a minified build:
+#
+#   java.lang.NoSuchMethodException:
+#       com.hanifedma.waterline.notify.WatchdogWorker.<init> [...]
+#
+# The symptom is quiet: the app works, the timer works, and only the
+# fifteen-minute watchdog that repairs a killed timer silently never runs.
+-keep class * extends androidx.work.ListenableWorker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}

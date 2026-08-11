@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Resources the shrinker cannot see being used.
+
+  google-services.json generates string/default_web_client_id, and the app
+  reads it with Resources.getIdentifier() rather than
+  R.string.default_web_client_id — it has to, because the resource does not
+  exist in a checkout without google-services.json, and a static reference
+  would fail to compile there.
+
+  A name-based lookup is invisible to the resource shrinker, so a release build
+  would drop this string while keeping every other Firebase one (those
+  libraries ship their own keep rules). The failure is release-only and quiet:
+  Firebase initialises, Firestore syncs, and only Google sign-in fails, with a
+  generic error, because the client id came back blank.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/default_web_client_id" />

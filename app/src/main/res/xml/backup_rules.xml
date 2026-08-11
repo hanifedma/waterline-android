@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 and below.
+
+  Only the fasts and the preferences travel. Naming them with <include> also
+  leaves everything else behind, which is the point: restoring
+  waterline_runtime.xml — "we already announced the 16-hour milestone" — onto a
+  new device would silently swallow a real alert.
+-->
+<full-backup-content>
+    <include domain="file" path="fasts.json" />
+    <include domain="sharedpref" path="waterline_prefs.xml" />
+</full-backup-content>

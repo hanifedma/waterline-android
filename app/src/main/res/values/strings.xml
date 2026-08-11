@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Only the strings the *platform* reads — the launcher label and the
+  notification channel names it shows in system settings. Everything inside
+  the app is translated in i18n/Strings.kt instead, because Waterline's
+  language is switched in the app rather than by the device locale, exactly as
+  it is on the web.
+-->
+<resources>
+    <string name="app_name">Waterline</string>
+
+    <string name="channel_timer">Running fast</string>
+    <string name="channel_timer_desc">The live timer while a fast is running. Silent, and stays until you end the fast.</string>
+    <string name="channel_milestone">Milestones</string>
+    <string name="channel_milestone_desc">Ketosis, autophagy, and the moment you reach your goal.</string>
+    <string name="channel_reminder">Reminders</string>
+    <string name="channel_reminder_desc">A nudge to start a fast when the clock is not running.</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The brand mark, for in-app use. Tinted by the caller. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32"
+    android:tint="@color/accent">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M16,2.5c5.4,6.2 9.2,11 9.2,15.6A9.2,9.2 0,0 1,16 27.3a9.2,9.2 0,0 1,-9.2 -9.2C6.8,13.5 10.6,8.7 16,2.5Z" />
+</vector>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Themed icons (Android 13+) are painted by the launcher in one colour from the
+  wallpaper, so only the silhouette survives. The waterline is left off: as a
+  same-colour stroke it would be invisible, and as a hole it would read as a
+  crack rather than a wave.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="2.5"
+        android:scaleY="2.5"
+        android:translateX="14"
+        android:translateY="16.5">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M16,2.5c5.4,6.2 9.2,11 9.2,15.6A9.2,9.2 0,0 1,16 27.3a9.2,9.2 0,0 1,-9.2 -9.2C6.8,13.5 10.6,8.7 16,2.5Z" />
+    </group>
+</vector>

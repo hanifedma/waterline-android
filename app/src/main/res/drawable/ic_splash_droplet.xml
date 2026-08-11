@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The splash icon. Android reserves the outer third of the 108dp canvas for
+  masking, so the drop is drawn at the same scale as the launcher foreground
+  and lands in the same place: no jump between the splash and the icon the
+  user just tapped.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="2.1"
+        android:scaleY="2.1"
+        android:translateX="20.4"
+        android:translateY="22.5">
+        <path
+            android:fillColor="@color/accent"
+            android:pathData="M16,2.5c5.4,6.2 9.2,11 9.2,15.6A9.2,9.2 0,0 1,16 27.3a9.2,9.2 0,0 1,-9.2 -9.2C6.8,13.5 10.6,8.7 16,2.5Z" />
+        <path
+            android:pathData="M7.3,18.6c2.2,0 2.2,1.7 4.4,1.7s2.2,-1.7 4.3,-1.7c2.2,0 2.2,1.7 4.4,1.7s2.2,-1.7 4.3,-1.7"
+            android:strokeColor="@color/ink"
+            android:strokeAlpha="0.55"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round" />
+    </group>
+</vector>

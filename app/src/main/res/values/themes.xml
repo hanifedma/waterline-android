@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      The window behind Compose. Painted ink rather than white because the app
+      is dark by default, exactly as the web app is: a white window flashing
+      for one frame before the first composition is the single most visible
+      thing a launch can get wrong.
+    -->
+    <style name="Theme.Waterline" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ink</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!--
+      The launch theme. It hands over to Theme.Waterline the moment the first
+      frame is ready, which MainActivity holds back until the store has loaded
+      — so the ring is never drawn empty and then jumped to the real time.
+    -->
+    <style name="Theme.Waterline.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ink</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_droplet</item>
+        <item name="postSplashScreenTheme">@style/Theme.Waterline</item>
+    </style>
+
+</resources>
