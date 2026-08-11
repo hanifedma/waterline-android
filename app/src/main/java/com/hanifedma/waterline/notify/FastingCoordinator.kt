@@ -79,11 +79,22 @@ object FastingCoordinator {
         }
 
         val now = System.currentTimeMillis()
-        // Keep an existing appointment rather than pushing it back every time
-        // something calls sync() — otherwise opening the app would postpone the
-        // nudge forever, which is the one thing it must not do.
         val due = runtime.reminderDueAt
-        val at = if (due > now) due else Alarms.applyQuietHours(prefs, now + prefs.reminderEveryHours * 3_600_000L)
+        val at = when {
+            // Keep an existing appointment rather than pushing it back every
+            // time something calls sync() — otherwise opening the app would
+            // postpone the nudge forever, which is the one thing it must not
+            // do.
+            due > now -> due
+
+            // Booked, overdue, and never delivered: the alarm was dropped, by
+            // a reboot or by a power manager. Fire it in a minute rather than
+            // waiting out another whole interval — a reminder silently skipped
+            // is indistinguishable from the feature not working.
+            due > 0L -> now + 60_000L
+
+            else -> Alarms.applyQuietHours(prefs, now + prefs.reminderEveryHours * 3_600_000L)
+        }
         runtime.reminderDueAt = at
         Alarms.scheduleReminder(context, at)
     }

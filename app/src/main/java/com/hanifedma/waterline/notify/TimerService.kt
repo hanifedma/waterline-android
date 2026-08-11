@@ -99,7 +99,11 @@ class TimerService : LifecycleService() {
             val prefs = Prefs(this@TimerService)
             val runtime = Runtime(this@TimerService)
             while (isActive) {
-                val active = runtime.active ?: break
+                // The mirror losing its fast means the fast is over, and the
+                // service has no reason to exist. Stopping here as well as in
+                // the watcher covers the case where the store never became
+                // ready — the notification must not outlive the fast.
+                val active = runtime.active ?: run { stopEverything(); return@launch }
                 Notifications.post(this@TimerService, Ids.TIMER, Notifications.timer(this@TimerService, active))
 
                 // A belt to the alarms' braces: if an alarm was delayed or
