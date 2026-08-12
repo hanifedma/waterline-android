@@ -15,6 +15,7 @@ import com.hanifedma.waterline.notify.FastingCoordinator
 import com.hanifedma.waterline.notify.Ids
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -71,17 +72,24 @@ class NotifyFlowTest {
     fun tearDown() {
         runtime.resetMilestones(null)
         runtime.reminderDueAt = 0L
+        WaterlineApp.repo(context).setHideTimes(false)
         nm.cancelAll()
         FastingCoordinator.sync(context)
     }
 
-    /**
-     * Driven through the repository rather than the mirror, deliberately.
+    /*
+     * Both helpers drive the repository rather than the mirror, deliberately.
      *
      * The mirror is a cache of what the store said; when the two disagree the
-     * store wins, and a test that writes only the mirror is testing a state
-     * the app is designed never to be in.
+     * store wins — publish() overwrites it from the next snapshot — so a test
+     * that writes only the mirror is testing a state the app is designed never
+     * to be in, and watching it get corrected a second later.
      */
+    private fun hideTheClock(on: Boolean) {
+        WaterlineApp.repo(context).setHideTimes(on)
+        Thread.sleep(1500)
+    }
+
     private fun beginFast(hoursAgo: Int) {
         val repo = WaterlineApp.repo(context)
         repo.cancelFast()
@@ -100,6 +108,57 @@ class NotifyFlowTest {
         // The elapsed time is drawn by SystemUI from these two, which is what
         // keeps it ticking with no process of ours alive.
         assertTrue(timer.notification.extras.getBoolean("android.showChronometer"))
+        assertEquals(runtime.active!!.start, timer.notification.`when`)
+    }
+
+    /**
+     * Focus mode's hardest promise.
+     *
+     * Every other surface can be reworded, but the elapsed time in the shade is
+     * drawn by SystemUI from these two flags — leave them on and a user who
+     * asked not to see a clock gets a live, ticking one on their lock screen,
+     * which is the most visible place the setting could possibly leak.
+     */
+    @Test
+    fun hidingTheClockTakesItOffTheLockScreenToo() {
+        hideTheClock(true)
+        beginFast(hoursAgo = 5)
+
+        val timer = posted(Ids.TIMER)
+        assertNotNull("the fast should still be in the shade", timer)
+        val extras = timer!!.notification.extras
+        assertFalse(
+            "SystemUI must not be asked to draw a chronometer",
+            extras.getBoolean("android.showChronometer"),
+        )
+        assertFalse(
+            "nor the timestamp the fast started at",
+            extras.getBoolean("android.showWhen", true),
+        )
+        // Still ongoing, still the same notification — only quieter about time.
+        assertTrue("it must not become swipeable", timer.isOngoing)
+
+        val shown = extras.getString("android.subText").orEmpty()
+        assertTrue("the sub-text should be a percentage, was \"$shown\"", shown.endsWith("%"))
+    }
+
+    @Test
+    fun showingTheClockAgainPutsItBack() {
+        hideTheClock(true)
+        beginFast(hoursAgo = 3)
+        assertFalse(posted(Ids.TIMER)!!.notification.extras.getBoolean("android.showChronometer"))
+
+        // Exactly what the switch does — and what a flip in the browser does
+        // once its snapshot lands here: write the setting, and let the mirror
+        // wake the coordinator.
+        hideTheClock(false)
+
+        val timer = posted(Ids.TIMER)
+        assertNotNull("the fast is still running, so the clock is still there", timer)
+        assertTrue(
+            "the chronometer should be back",
+            timer!!.notification.extras.getBoolean("android.showChronometer"),
+        )
         assertEquals(runtime.active!!.start, timer.notification.`when`)
     }
 

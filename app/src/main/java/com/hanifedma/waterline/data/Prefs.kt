@@ -39,6 +39,25 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_GOAL, 16)
         set(v) = sp.edit { putInt(KEY_GOAL, v) }
 
+    /**
+     * Focus mode — a MIRROR of the synced `settings.hideTimes`, not a
+     * preference of its own. The repository writes it on every state it
+     * publishes; nothing else should.
+     *
+     * It has to live here because the notification is built by
+     * [com.hanifedma.waterline.notify.Notifications] from an alarm receiver or
+     * a just-woken service, with no repository, no Firestore listener and
+     * seconds to live. Reading SharedPreferences is the only way to know
+     * whether the shade is allowed to show a clock.
+     *
+     * Mirroring it here is also what re-syncs the shade: [changes] drives
+     * FastingCoordinator.sync, so flipping the switch in the browser rebuilds
+     * this phone's notification without the app being open.
+     */
+    var hideTimes: Boolean
+        get() = sp.getBoolean(KEY_HIDE_TIMES, false)
+        set(v) = sp.edit { putBoolean(KEY_HIDE_TIMES, v) }
+
     var milestoneAlerts: Boolean
         get() = sp.getBoolean(KEY_MILESTONES, true)
         set(v) = sp.edit { putBoolean(KEY_MILESTONES, v) }
@@ -96,6 +115,7 @@ class Prefs(context: Context) {
         const val KEY_DARK = "dark"
         const val KEY_LANG = "lang"
         const val KEY_GOAL = "goalHours"
+        const val KEY_HIDE_TIMES = "hideTimes"
         const val KEY_MILESTONES = "milestoneAlerts"
         const val KEY_REMINDERS = "reminders"
         const val KEY_REMIND_EVERY = "reminderEveryHours"

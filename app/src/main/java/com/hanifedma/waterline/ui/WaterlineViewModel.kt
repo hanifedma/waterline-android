@@ -100,6 +100,15 @@ class WaterlineViewModel(app: Application) : AndroidViewModel(app) {
         prefs.goalHours = hours
     }
 
+    /**
+     * Focus mode. Read back from `state.settings`, never held here — it syncs,
+     * so the switch has to follow the account rather than this screen.
+     */
+    fun setHideTimes(on: Boolean) {
+        repo.setHideTimes(on)
+        say(t(if (on) "toast.hideTimesOn" else "toast.hideTimesOff"))
+    }
+
     fun updateFast(id: String, start: Long, end: Long) {
         repo.updateFast(id, start, end)
         say(t("toast.fastUpdated"))

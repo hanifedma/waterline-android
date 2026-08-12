@@ -32,6 +32,17 @@ data class ActiveFast(
     /** 0..1, linear. The ring eases this; nothing numeric ever does. */
     fun progress(now: Long = System.currentTimeMillis()): Float =
         if (goalMs <= 0) 0f else min(1f, max(0f, elapsed(now).toFloat() / goalMs))
+
+    /**
+     * Whole percent of the goal, for the face and the notification when the
+     * clock is hidden.
+     *
+     * Floored, and held at 99 until the goal is genuinely met: rounding would
+     * print 100% a couple of minutes early and then carry on counting, which
+     * reads as a bug rather than as an achievement.
+     */
+    fun percent(now: Long = System.currentTimeMillis()): Int =
+        if (reachedGoal(now)) 100 else min(99, (progress(now) * 100).toInt())
 }
 
 /** A finished fast. Mirrors `{ start, end, goalHours }` in Firestore. */
@@ -45,8 +56,38 @@ data class Fast(
     val hitGoal: Boolean get() = duration >= goalHours * HOUR_MS
 }
 
-/** The one setting that syncs; everything else is per-device. */
-data class FastingSettings(val goalHours: Int = 16)
+/**
+ * The settings that sync with the account; everything else is per-device.
+ *
+ * @param hideTimes focus mode. While a fast is *running*, the timer card and
+ *        the notification give up every number that could be turned back into
+ *        a time — the elapsed clock, the countdown, the goal, the start and the
+ *        projected finish — leaving the ring, the stage, and a percentage.
+ */
+data class FastingSettings(
+    val goalHours: Int = DEFAULT_GOAL_HOURS,
+    val hideTimes: Boolean = false,
+) {
+    companion object {
+        /**
+         * The one gate every settings document passes through.
+         *
+         * They arrive from three directions — the local JSON file, a Firestore
+         * snapshot, and the guest merge — and any of them can be stale,
+         * hand-edited, or written by a version that had never heard of a
+         * field. A missing value lands on its default; a nonsense one is
+         * ignored rather than defended against everywhere after.
+         */
+        fun of(goalHours: Int?, hideTimes: Boolean?): FastingSettings = FastingSettings(
+            goalHours = goalHours?.takeIf { it > 0 } ?: DEFAULT_GOAL_HOURS,
+            // Anything that isn't literally true is off: a document written
+            // before the field existed, a null, a string.
+            hideTimes = hideTimes == true,
+        )
+    }
+}
+
+const val DEFAULT_GOAL_HOURS = 16
 
 /** Everything the UI draws from. */
 data class FastingState(

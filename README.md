@@ -48,6 +48,8 @@ Everything the web app does:
 - **Streak calendar** and **history**, with any fast editable or deletable
 - **Correct the clock** — move a start time you forgot to set, or end a fast at
   the time you actually ate
+- **Hide the clock** — one synced switch, and a running fast shows nothing but
+  the ring. [See below](#hide-the-clock)
 - **Google sign-in** with real-time sync, or no account at all
 - **Offline** — everything works with no signal and syncs when you are back
 - **Korean and English**, dark and light, dark by default
@@ -57,6 +59,64 @@ And what a browser tab cannot do:
 - **A live lock-screen timer** that keeps counting for as long as the fast runs
 - **Milestone alerts** — ketosis, autophagy, and the moment you hit your goal
 - **A reminder to start fasting** that returns after you swipe it away
+
+---
+
+## Hide the clock
+
+Watching a countdown is the surest way to make a fast feel long. **Settings →
+The timer → Hide the clock** turns the timer into a game: while a fast is
+running you get the ring, the metabolic stage you are in, and a percentage —
+and nothing that can be turned back into a time.
+
+| | Clock shown | Clock hidden |
+|---|---|---|
+| Ring face | `05:36:06` | `35%` |
+| Under it | `10h 22m left` | — (`Goal reached` once you pass it) |
+| Coach line | `2h 22m until Glycogen burning` | `Next up: Glycogen burning` |
+| Goal picker | `Goal · 16 hours`, greyed | put away |
+| Below the button | `Started Wed, 12 Aug 16:11 · 16h goal at Thu, 13 Aug 08:11` | put away |
+| **Notification** | `Waterline · 10h 22m left`, chronometer ticking | `Waterline · 35%`, no chronometer |
+| Milestone alert | *"Twelve hours. You're officially burning fat for fuel."* | *"Glycogen runs low and lipolysis takes over…"* |
+
+**The notification is the hard half, and it is why this is not simply the web
+app's feature ported.** On screen everything can be reworded; the elapsed time
+in the shade cannot, because SystemUI draws it itself from `setUsesChronometer`
++ `when` and keeps drawing it with no process of ours alive. Left on, a user who
+asked not to see a clock gets a live, ticking one on their lock screen — the
+most visible place the setting could possibly leak. So both flags come off, the
+sub-text becomes the percentage, and the Android 16 status-bar chip shows `35%`
+where it showed a countdown. The **stage progress bar stays**: a bar with no
+numbers on it is exactly what was asked for.
+
+Four rules keep it honest:
+
+- **Only while a fast is running.** Idle you still see and pick your goal —
+  there is nothing to hide yet, and a setting that appears to do nothing is a
+  broken setting.
+- **Nothing about the fast changes.** It is recorded at its true length, the
+  ring still turns amber at the goal, and the completion sheet reveals all of
+  it. Hiding is a *view*.
+- **The percentage is the real one**, floored and held at 99% until the goal is
+  genuinely met — rounding would print `100%` a couple of minutes early and then
+  keep counting.
+- **There is always a way out.** **Peek**, beside *Edit start*, uncovers
+  everything for eight seconds or puts it straight back. The Body tab is left
+  alone: the story of what your body is doing is the half worth keeping.
+
+It rides on `settings.hideTimes` in your user document, beside the goal, so the
+switch follows the account — flip it in the browser and this phone's
+notification rebuilds itself without the app being open. Signed out it lives in
+the same local JSON file the web app's `localStorage` mirrors.
+
+### Where it lives in the code
+
+`hideTimes` is a *synced* setting, but the notification is built by an alarm
+receiver or a just-woken service with no repository in reach and seconds to
+live. So the repository mirrors it into `Prefs` on every state it publishes, and
+`Notifications` reads it from there — the same trick already used for the goal,
+for the same reason. Mirroring it is also what re-syncs the shade: writing the
+pref wakes `Prefs.changes()`, which calls `FastingCoordinator.sync()`.
 
 ---
 
@@ -247,7 +307,7 @@ the web rules already cover:
 
 ```
 users/{uid}                 { activeFast: { start, goalHours } | null,
-                              settings: { goalHours } }
+                              settings: { goalHours, hideTimes } }
 users/{uid}/fasts/{fastId}  { start, end, goalHours }
 ```
 
@@ -334,15 +394,17 @@ and every statistic are the real values. Only the drawn arc is flattered.
 ## Tests
 
 ```bash
-./gradlew testDebugUnitTest          # 20 logic tests, no device
-./gradlew connectedDebugAndroidTest  # 6 notification tests, needs a device
+./gradlew testDebugUnitTest          # 23 logic tests, no device
+./gradlew connectedDebugAndroidTest  # 8 notification tests, needs a device
 ```
 
 The logic tests cover streaks across DST and time zones, the clamping rules
-that keep a fast inside what `firestore.rules` will accept, stage boundaries
-and the ring curve. The instrumented tests cover the four promises above:
-the clock appears, the clock goes away, the nudge returns after a swipe, and a
-milestone is announced exactly once.
+that keep a fast inside what `firestore.rules` will accept, stage boundaries,
+the ring curve, and the hidden percentage's floor. The instrumented tests cover
+the promises above: the clock appears, the clock goes away, the nudge returns
+after a swipe, a milestone is announced exactly once — and that hiding the
+clock takes it off the lock screen as well as off the timer screen, which is
+the one part of that feature no unit test can see.
 
 ---
 

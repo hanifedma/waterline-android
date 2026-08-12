@@ -53,6 +53,8 @@ object Strings {
         "ring.readyMeta" to "{goal}h goal",
         "ring.left" to "{time} left",
         "ring.past" to "{time} past your {goal}h goal",
+        "ring.percent" to "{pct}%",
+        "ring.goalMet" to "Goal reached",
         "goal.label" to "Goal",
         "goal.option" to "{h} hours",
         "goal.locked" to "End your fast to change the goal",
@@ -60,7 +62,10 @@ object Strings {
         "btn.end" to "End fast",
         "btn.editStart" to "Edit start",
         "btn.discard" to "Discard",
+        "btn.peek" to "Peek",
+        "btn.hideAgain" to "Hide again",
         "coach.until" to "{time} until {stage}",
+        "coach.next" to "Next up: {stage}",
         "coach.pastAll" to "You are past every milestone on the map.",
         "controls.startedAt" to "Started {start} · {goal}h goal at {goalAt}",
 
@@ -181,6 +186,9 @@ object Strings {
         "toast.discardConfirm" to "It won't be logged, and the time is gone for good.",
         "toast.discarded" to "Fast discarded",
         "toast.goalReached" to "{goal}h goal reached. Anything now is a bonus.",
+        "toast.goalReachedBlind" to "Goal reached. Anything from here is a bonus.",
+        "toast.hideTimesOn" to "Clock hidden. Just you and the ring.",
+        "toast.hideTimesOff" to "Clock is back.",
         "toast.merged" to "Moved {count} local records into your account.",
         "toast.merged.one" to "Moved {count} local record into your account.",
         "toast.signedOut" to "Signed out. Back to local mode.",
@@ -213,6 +221,14 @@ object Strings {
         "settings.language" to "Language",
         "settings.defaultGoal" to "Default goal",
         "settings.defaultGoalHint" to "What the picker starts on. A running fast keeps the goal it began with.",
+
+        "settings.timerGroup" to "The timer",
+        "settings.hideTimes" to "Hide the clock",
+        "settings.hideTimesHint" to
+            "While a fast is running, show only the ring — no elapsed clock, no countdown, no goal, " +
+            "no start or finish time. The notification goes quiet about them too. " +
+            "Every number comes back the moment you end it.",
+        "settings.hideTimesSync" to "Syncs with your account, so the web app and every phone agree.",
 
         "settings.notifications" to "Notifications",
         "settings.milestones" to "Milestone alerts",
@@ -263,6 +279,7 @@ object Strings {
         "notif.action.start" to "Start {goal}h fast",
         "notif.goal.title" to "Goal reached 🏆",
         "notif.goal.body" to "You hit your {goal}-hour goal. Anything now is a bonus.",
+        "notif.goal.bodyBlind" to "You hit your goal. Anything from here is a bonus.",
         "notif.reminder.title" to "Ready to fast?",
         "notif.reminder.0" to "The clock isn't running. Begin whenever you're ready.",
         "notif.reminder.1" to "Your last fast was {time} ago. Another one?",
@@ -305,6 +322,8 @@ object Strings {
         "ring.readyMeta" to "목표 {goal}시간",
         "ring.left" to "{time} 남음",
         "ring.past" to "{goal}시간 목표에서 {time} 초과",
+        "ring.percent" to "{pct}%",
+        "ring.goalMet" to "목표 달성",
         "goal.label" to "목표",
         "goal.option" to "{h}시간",
         "goal.locked" to "목표를 바꾸려면 단식을 종료하세요",
@@ -312,7 +331,10 @@ object Strings {
         "btn.end" to "단식 종료",
         "btn.editStart" to "시작 시간 수정",
         "btn.discard" to "취소",
+        "btn.peek" to "잠깐 보기",
+        "btn.hideAgain" to "다시 숨기기",
         "coach.until" to "{stage}까지 {time} 남음",
+        "coach.next" to "다음 단계: {stage}",
         "coach.pastAll" to "지도의 모든 단계를 지나왔습니다.",
         "controls.startedAt" to "{start} 시작 · 목표 {goal}시간, {goalAt} 도달",
 
@@ -433,6 +455,9 @@ object Strings {
         "toast.discardConfirm" to "기록되지 않으며 시간도 되돌릴 수 없습니다.",
         "toast.discarded" to "단식을 취소했습니다",
         "toast.goalReached" to "{goal}시간 목표 달성. 지금부터는 전부 보너스예요.",
+        "toast.goalReachedBlind" to "목표 달성. 지금부터는 전부 보너스예요.",
+        "toast.hideTimesOn" to "시계를 숨겼어요. 이제 링만 보입니다.",
+        "toast.hideTimesOff" to "시계를 다시 표시합니다.",
         "toast.merged" to "{count}개의 로컬 기록을 계정으로 옮겼습니다.",
         "toast.merged.one" to "{count}개의 로컬 기록을 계정으로 옮겼습니다.",
         "toast.signedOut" to "로그아웃되었습니다. 로컬 모드로 돌아갑니다.",
@@ -465,6 +490,13 @@ object Strings {
         "settings.language" to "언어",
         "settings.defaultGoal" to "기본 목표",
         "settings.defaultGoalHint" to "선택기의 기본값입니다. 진행 중인 단식은 시작할 때의 목표를 유지합니다.",
+
+        "settings.timerGroup" to "타이머",
+        "settings.hideTimes" to "시계 숨기기",
+        "settings.hideTimesHint" to
+            "단식이 진행되는 동안 링만 보여줍니다 — 경과 시간도, 남은 시간도, 목표도, 시작·종료 시각도 없습니다. " +
+            "알림에서도 시간을 감춥니다. 단식을 끝내면 모든 숫자가 다시 나타납니다.",
+        "settings.hideTimesSync" to "계정과 동기화되어 웹 앱과 모든 기기에서 동일하게 적용됩니다.",
 
         "settings.notifications" to "알림",
         "settings.milestones" to "단계 알림",
@@ -515,6 +547,7 @@ object Strings {
         "notif.action.start" to "{goal}시간 단식 시작",
         "notif.goal.title" to "목표 달성 🏆",
         "notif.goal.body" to "{goal}시간 목표를 달성했어요. 지금부터는 전부 보너스입니다.",
+        "notif.goal.bodyBlind" to "목표를 달성했어요. 지금부터는 전부 보너스입니다.",
         "notif.reminder.title" to "단식할 준비 되셨나요?",
         "notif.reminder.0" to "시계가 멈춰 있어요. 준비되면 시작하세요.",
         "notif.reminder.1" to "마지막 단식이 {time} 전이에요. 한 번 더 해볼까요?",

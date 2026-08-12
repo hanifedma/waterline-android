@@ -213,6 +213,7 @@ fun WaterlineRoot(
                         goalHours = state.settings.goalHours,
                         goalChoices = vm.goalChoices(),
                         stats = stats,
+                        hideTimes = state.settings.hideTimes,
                         onSetGoal = vm::setGoal,
                         onBegin = vm::begin,
                         onEnd = { editor = Editor.End },
@@ -260,6 +261,7 @@ fun WaterlineRoot(
                             account = account,
                             status = status,
                             goalHours = state.settings.goalHours,
+                            hideTimes = state.settings.hideTimes,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

@@ -208,6 +208,46 @@ class FastingTest {
         STAGES.zipWithNext { a, b -> assertTrue(b.hour > a.hour) }
     }
 
+    // ---------- focus mode ----------
+
+    @Test
+    fun `the hidden percentage is floored, never rounded up to the goal`() {
+        val start = at(2026, 8, 12, 8, 0)
+        val active = ActiveFast(start, 16)
+
+        assertEquals(0, active.percent(start))
+        assertEquals(50, active.percent(start + 8 * HOUR_MS))
+        // 15h 59m of 16h is 99.9%. Rounding would print 100% while the fast is
+        // still running, with a green ring beside it saying otherwise.
+        assertEquals(99, active.percent(start + 16 * HOUR_MS - MINUTE_MS))
+        assertEquals(100, active.percent(start + 16 * HOUR_MS))
+        // Past the goal it holds at 100 rather than climbing: "137%" is a
+        // number this mode exists to hide.
+        assertEquals(100, active.percent(start + 40 * HOUR_MS))
+    }
+
+    @Test
+    fun `settings default, and survive a document that never knew the field`() {
+        assertEquals(FastingSettings(16, false), FastingSettings.of(null, null))
+        // Every account written before focus mode existed reads as off.
+        assertEquals(FastingSettings(20, false), FastingSettings.of(20, null))
+        assertEquals(FastingSettings(20, true), FastingSettings.of(20, true))
+        // A nonsense goal beside a good flag must not take the flag down with it.
+        assertEquals(FastingSettings(16, true), FastingSettings.of(-5, true))
+        assertEquals(FastingSettings(16, true), FastingSettings.of(0, true))
+    }
+
+    @Test
+    fun `editing one setting leaves the other alone`() {
+        // The rule LocalStore has to follow. Rebuilding the record as
+        // FastingSettings(goalHours) rather than copy() would switch focus
+        // mode off every time a fast began — exactly when it is being counted
+        // on, and with no compiler error to catch it.
+        val saved = FastingSettings(goalHours = 20, hideTimes = true)
+        assertTrue(saved.copy(goalHours = 36).hideTimes)
+        assertEquals(20, saved.copy(hideTimes = false).goalHours)
+    }
+
     // ---------- completion copy ----------
 
     @Test

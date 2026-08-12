@@ -66,11 +66,19 @@ object Notifications {
      * process is killed the moment after posting. Everything the app *does*
      * have to redraw — the countdown, the stage, the progress bar — changes at
      * most once a minute.
+     *
+     * Focus mode changes what this notification is allowed to say, and the
+     * chronometer is the whole reason it has to be handled here rather than
+     * only on screen: leaving it on would put a live, ticking clock on the lock
+     * screen of a user who has asked not to see one — the single most visible
+     * place the setting could leak. What survives is the ring's progress bar,
+     * the stage, and a percentage.
      */
     fun timer(context: Context, active: ActiveFast, now: Long = System.currentTimeMillis()): Notification {
         val prefs = Prefs(context)
         val lang = prefs.lang
         val fmt = Format(lang)
+        val hide = prefs.hideTimes
 
         val elapsed = active.elapsed(now)
         val position = stageAt(elapsed / 3.6e6)
@@ -86,10 +94,10 @@ object Notifications {
          * there meant the one number the user pulls down the shade for was the
          * one hidden until they expanded it.
          */
-        val short = if (reached) {
-            Strings.t(lang, "notif.timer.pastShort", "time" to fmt.duration(elapsed - active.goalMs))
-        } else {
-            Strings.t(lang, "notif.timer.leftShort", "time" to fmt.countdown(active.goalMs - elapsed))
+        val short = when {
+            hide -> percentLabel(lang, active, now)
+            reached -> Strings.t(lang, "notif.timer.pastShort", "time" to fmt.duration(elapsed - active.goalMs))
+            else -> Strings.t(lang, "notif.timer.leftShort", "time" to fmt.countdown(active.goalMs - elapsed))
         }
         val line = if (reached) {
             Strings.t(
@@ -110,19 +118,30 @@ object Notifications {
         )
 
         val coach = position.next?.let {
-            Strings.t(
-                lang, "coach.until",
-                "time" to fmt.countdown(it.hour * 3_600_000L - elapsed),
-                "stage" to Strings.t(lang, it.titleKey),
-            )
+            if (hide) {
+                Strings.t(lang, "coach.next", "stage" to Strings.t(lang, it.titleKey))
+            } else {
+                Strings.t(
+                    lang, "coach.until",
+                    "time" to fmt.countdown(it.hour * 3_600_000L - elapsed),
+                    "stage" to Strings.t(lang, it.titleKey),
+                )
+            }
         } ?: Strings.t(lang, "coach.pastAll")
 
         val builder = base(context, Channels.TIMER)
             .setContentTitle("${stage.icon}  ${Strings.t(lang, stage.titleKey)}")
             .setContentText(coach)
             .setSubText(short)
-            .setUsesChronometer(true)
-            .setShowWhen(true)
+            // SystemUI, not us, draws the elapsed clock from these. They are
+            // the one thing focus mode cannot merely reword.
+            //
+            // `when` still carries the start even while hidden — showWhen(false)
+            // is what stops it being drawn, and the shade sorts by this value,
+            // so zeroing it would send an ongoing fast to the bottom of the
+            // list and move it again on every redraw.
+            .setUsesChronometer(!hide)
+            .setShowWhen(!hide)
             .setWhen(active.start)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -150,25 +169,34 @@ object Notifications {
              * and how far along the fast is between them.
              */
             builder.setRequestPromotedOngoing(true)
-                .setShortCriticalText(chipText(lang, fmt, active, now))
+                .setShortCriticalText(chipText(lang, fmt, active, now, hide))
                 .setStyle(stageProgress(context, active, now))
         } else {
             // The same easing the ring uses. A linear bar next to an eased ring
             // reads as one of the two being broken.
+            //
+            // The bar itself stays in focus mode — a progress bar with no
+            // numbers on it is precisely what the user asked to be left with.
+            // Only the two lines of times around it go.
+            val expanded = if (hide) coach else "$line\n$coach\n$foot"
             builder.setProgress(1000, (Fasting.easeProgress(active.progress(now)) * 1000).toInt(), false)
-                .setStyle(NotificationCompat.BigTextStyle().bigText("$line\n$coach\n$foot"))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(expanded))
         }
 
         return builder.build()
     }
 
+    private fun percentLabel(lang: Lang, active: ActiveFast, now: Long): String =
+        Strings.t(lang, "ring.percent", "pct" to active.percent(now))
+
     /** The status bar chip has room for about seven characters. */
-    private fun chipText(lang: Lang, fmt: Format, active: ActiveFast, now: Long): String {
+    private fun chipText(lang: Lang, fmt: Format, active: ActiveFast, now: Long, hide: Boolean): String {
         val elapsed = active.elapsed(now)
-        return if (active.reachedGoal(now)) {
-            Strings.t(lang, "notif.timer.pastShort", "time" to fmt.duration(elapsed - active.goalMs))
-        } else {
-            fmt.countdown(active.goalMs - elapsed)
+        return when {
+            hide -> percentLabel(lang, active, now)
+            active.reachedGoal(now) ->
+                Strings.t(lang, "notif.timer.pastShort", "time" to fmt.duration(elapsed - active.goalMs))
+            else -> fmt.countdown(active.goalMs - elapsed)
         }
     }
 
@@ -204,12 +232,20 @@ object Notifications {
         return style
     }
 
-    /** A stage boundary — ketosis, autophagy, and the rest. */
+    /**
+     * A stage boundary — ketosis, autophagy, and the rest.
+     *
+     * Several cheers say the hour out loud ("Twelve hours…", "Two days…"), so
+     * in focus mode the stage's own description carries the moment instead: it
+     * says the same thing about the body without putting a number to it.
+     */
     fun milestone(context: Context, stage: Stage): Notification {
-        val lang = Prefs(context).lang
+        val prefs = Prefs(context)
+        val lang = prefs.lang
+        val body = Strings.t(lang, if (prefs.hideTimes) stage.textKey else stage.cheerKey)
         return base(context, Channels.milestoneChannel(context))
             .setContentTitle("${stage.icon}  ${Strings.t(lang, stage.titleKey)}")
-            .setContentText(Strings.t(lang, stage.cheerKey))
+            .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(Strings.t(lang, stage.textKey)))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -219,10 +255,16 @@ object Notifications {
     }
 
     fun goalReached(context: Context, active: ActiveFast): Notification {
-        val lang = Prefs(context).lang
+        val prefs = Prefs(context)
+        val lang = prefs.lang
+        val body = if (prefs.hideTimes) {
+            Strings.t(lang, "notif.goal.bodyBlind")
+        } else {
+            Strings.t(lang, "notif.goal.body", "goal" to active.goalHours)
+        }
         return base(context, Channels.milestoneChannel(context))
             .setContentTitle(Strings.t(lang, "notif.goal.title"))
-            .setContentText(Strings.t(lang, "notif.goal.body", "goal" to active.goalHours))
+            .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)

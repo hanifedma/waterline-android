@@ -184,6 +184,20 @@ class FastingRepository(
         // right default before the first snapshot of the next cold start.
         if (next.settings.goalHours > 0) prefs.goalHours = next.settings.goalHours
 
+        /*
+         * Focus mode is mirrored for a stronger reason: the notification is
+         * built with no repository in reach, and it is the one thing that
+         * decides whether the lock screen may show a running clock. Written
+         * before the state is published, so anything that reacts to the new
+         * state already reads the new value.
+         *
+         * SharedPreferences only notifies on an actual change, so this is a
+         * no-op on the great majority of snapshots — and on the rare real one
+         * it wakes FastingCoordinator through Prefs.changes(), which is how a
+         * switch flipped in the browser reaches this phone's shade.
+         */
+        prefs.hideTimes = next.settings.hideTimes
+
         _state.value = next
         _status.value = when {
             store.mode == "local" -> SyncStatus.LOCAL
@@ -225,6 +239,19 @@ class FastingRepository(
             // the notification's "start a fast" action offers the same goal.
             prefs.goalHours = goalHours
         }
+    }
+
+    /**
+     * Turns focus mode on or off. Allowed mid-fast, unlike the goal: it
+     * changes what the app is willing to show, never what is recorded.
+     *
+     * The mirror is written here as well as in publish(), for the same reason
+     * the three fast-changing writes are: the shade is rebuilt off the back of
+     * this, and Firestore's echo — while quick — is not synchronous.
+     */
+    fun setHideTimes(hideTimes: Boolean) {
+        store.setHideTimes(hideTimes)
+        prefs.hideTimes = hideTimes
     }
 
     fun setStart(start: Long) {

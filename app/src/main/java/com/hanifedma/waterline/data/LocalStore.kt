@@ -85,11 +85,16 @@ class LocalStore private constructor(context: Context) : FastStore {
                 fasts.add(Fast(id, start, end, goal))
             }
 
-            val goal = root.optJSONObject("settings")?.optInt("goalHours", 16) ?: 16
+            val settings = root.optJSONObject("settings")
             FastingState(
                 active = active,
                 fasts = fasts.sortedByDescending { it.start },
-                settings = FastingSettings(if (goal > 0) goal else 16),
+                settings = FastingSettings.of(
+                    goalHours = settings?.optInt("goalHours", 0),
+                    // optBoolean, not optString: the web app writes a real JSON
+                    // boolean here and both clients read the same file shape.
+                    hideTimes = settings?.optBoolean("hideTimes", false),
+                ),
             )
         } catch (e: Exception) {
             // A corrupt file must not brick the app. Better an empty history
@@ -117,7 +122,12 @@ class LocalStore private constructor(context: Context) : FastStore {
                 )
             }
             root.put("fasts", arr)
-            root.put("settings", JSONObject().put("goalHours", sorted.settings.goalHours))
+            root.put(
+                "settings",
+                JSONObject()
+                    .put("goalHours", sorted.settings.goalHours)
+                    .put("hideTimes", sorted.settings.hideTimes),
+            )
             file.writeText(root.toString())
         } catch (e: Exception) {
             Log.e(TAG, "Couldn't save local fasts", e)
@@ -125,10 +135,18 @@ class LocalStore private constructor(context: Context) : FastStore {
         state.value = sorted
     }
 
+    /*
+     * Settings are always edited with copy(), never rebuilt.
+     *
+     * FastingSettings(goalHours) would construct a *fresh* record, silently
+     * resetting every other field to its default — so beginning a fast would
+     * turn focus mode off behind the user's back. There is no compiler error
+     * for that; there is only this rule.
+     */
     override fun startFast(active: ActiveFast) {
         val s = state.value
         if (s.active != null) return
-        write(s.copy(active = active, settings = FastingSettings(active.goalHours)))
+        write(s.copy(active = active, settings = s.settings.copy(goalHours = active.goalHours)))
     }
 
     override fun setActive(active: ActiveFast) {
@@ -140,7 +158,12 @@ class LocalStore private constructor(context: Context) : FastStore {
     override fun setGoal(goalHours: Int) {
         val s = state.value
         if (s.active != null) return
-        write(s.copy(settings = FastingSettings(goalHours)))
+        write(s.copy(settings = s.settings.copy(goalHours = goalHours)))
+    }
+
+    override fun setHideTimes(hideTimes: Boolean) {
+        val s = state.value
+        write(s.copy(settings = s.settings.copy(hideTimes = hideTimes)))
     }
 
     override fun endFast(record: Fast) {

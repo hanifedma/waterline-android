@@ -35,6 +35,14 @@ interface FastStore {
     /** Sets the goal for the *next* fast. */
     fun setGoal(goalHours: Int)
 
+    /**
+     * Turns focus mode on or off.
+     *
+     * Unlike the goal this may change mid-fast: it changes what the timer card
+     * and the notification are willing to say, never what is recorded.
+     */
+    fun setHideTimes(hideTimes: Boolean)
+
     /** Files the running fast in history and clears it, atomically. */
     fun endFast(record: Fast)
 

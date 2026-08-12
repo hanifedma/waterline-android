@@ -55,7 +55,15 @@ class WaterlineApp : Application() {
                 .collect { FastingCoordinator.sync(this@WaterlineApp) }
         }
 
-        // Settings can change what the reminders should be doing.
+        /*
+         * Settings can change what the shade should look like: the reminder
+         * switches, and focus mode.
+         *
+         * Focus mode is a *synced* setting, mirrored into Prefs by the
+         * repository — which is what makes this listener the path by which a
+         * switch flipped in the browser reaches this phone's notification,
+         * with no screen open and possibly no foreground service alive.
+         */
         scope.launch {
             Prefs(this@WaterlineApp).changes().drop(1).collect {
                 FastingCoordinator.sync(this@WaterlineApp)

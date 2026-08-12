@@ -74,6 +74,7 @@ fun SettingsScreen(
     account: Account?,
     status: SyncStatus,
     goalHours: Int,
+    hideTimes: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -173,6 +174,25 @@ fun SettingsScreen(
                         onSelect = vm::setGoal,
                     )
                 },
+            )
+        }
+
+        // ---- The timer -----------------------------------------------
+        // Its own card rather than a row under Appearance: this one setting
+        // reaches the timer screen *and* the lock screen, and it is the only
+        // thing here that follows the account rather than the device.
+        WCard {
+            SectionHead("⏱️", Strings.t(lang, "settings.timerGroup"), null)
+            SettingRow(
+                title = Strings.t(lang, "settings.hideTimes"),
+                hint = Strings.t(lang, "settings.hideTimesHint"),
+                trailing = { WSwitch(hideTimes, vm::setHideTimes) },
+            )
+            Text(
+                Strings.t(lang, "settings.hideTimesSync"),
+                style = MaterialTheme.typography.bodySmall,
+                color = c.faint,
+                modifier = Modifier.padding(bottom = 8.dp),
             )
         }
 

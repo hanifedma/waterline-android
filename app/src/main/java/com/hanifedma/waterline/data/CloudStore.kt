@@ -19,7 +19,7 @@ import kotlinx.coroutines.tasks.await
  * web app:
  *
  *   users/{uid}                 { activeFast: { start, goalHours } | null,
- *                                 settings: { goalHours } }
+ *                                 settings: { goalHours, hideTimes } }
  *   users/{uid}/fasts/{fastId}  { start, end, goalHours }
  *
  * Real-time by construction: both reads are snapshot listeners, so a fast
@@ -63,7 +63,7 @@ class CloudStore(
             }
             if (snap == null) return@addSnapshotListener
             active = readActive(snap)
-            settings = FastingSettings(readGoal(snap) ?: 16)
+            settings = readSettings(snap)
             userCached = snap.metadata.isFromCache
             emit()
         }
@@ -122,9 +122,25 @@ class CloudStore(
         ).addOnFailureListener { fail("err.auth.network", it) }
     }
 
+    /*
+     * Both settings writes name one key each, and leave the other alone.
+     *
+     * SetOptions.merge() merges *recursively*: keys omitted from a nested map
+     * stay as they are, so writing settings.goalHours cannot disturb
+     * settings.hideTimes, or the other way round. That is what makes it safe
+     * for the phone and the browser to be editing different settings at the
+     * same moment.
+     */
     override fun setGoal(goalHours: Int) {
         userRef().set(
             mapOf("settings" to mapOf("goalHours" to goalHours)),
+            com.google.firebase.firestore.SetOptions.merge(),
+        ).addOnFailureListener { fail("err.auth.network", it) }
+    }
+
+    override fun setHideTimes(hideTimes: Boolean) {
+        userRef().set(
+            mapOf("settings" to mapOf("hideTimes" to hideTimes)),
             com.google.firebase.firestore.SetOptions.merge(),
         ).addOnFailureListener { fail("err.auth.network", it) }
     }
@@ -206,9 +222,14 @@ class CloudStore(
             )
             count++
         }
-        // Carry the guest's chosen goal over to a brand-new account.
+        // Carry the guest's settings over to a brand-new account. An account
+        // that already has settings keeps them: those followed the user here
+        // from another device, and are the more deliberate choice.
         if (userDoc == null || !userDoc.exists() || userDoc.get("settings") == null) {
-            patch["settings"] = mapOf("goalHours" to guest.settings.goalHours)
+            patch["settings"] = mapOf(
+                "goalHours" to guest.settings.goalHours,
+                "hideTimes" to guest.settings.hideTimes,
+            )
         }
         if (patch.isNotEmpty()) {
             userRef().set(patch, com.google.firebase.firestore.SetOptions.merge())
@@ -231,10 +252,13 @@ class CloudStore(
             return if (start > 0 && goal > 0) ActiveFast(start, goal) else null
         }
 
-        fun readGoal(snap: DocumentSnapshot): Int? {
+        fun readSettings(snap: DocumentSnapshot): FastingSettings {
             @Suppress("UNCHECKED_CAST")
-            val map = snap.get("settings") as? Map<String, Any?> ?: return null
-            return (map["goalHours"] as? Number)?.toInt()?.takeIf { it > 0 }
+            val map = snap.get("settings") as? Map<String, Any?> ?: return FastingSettings()
+            return FastingSettings.of(
+                goalHours = (map["goalHours"] as? Number)?.toInt(),
+                hideTimes = map["hideTimes"] as? Boolean,
+            )
         }
 
         fun toFast(d: DocumentSnapshot): Fast? {

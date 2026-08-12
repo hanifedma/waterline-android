@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -75,6 +76,9 @@ private fun rememberNow(running: Boolean): Long {
     return now
 }
 
+/** How long a peek uncovers the real numbers for. Matches the web app. */
+private const val PEEK_MS = 8_000L
+
 @Composable
 fun TimerScreen(
     lang: Lang,
@@ -83,6 +87,7 @@ fun TimerScreen(
     goalHours: Int,
     goalChoices: List<Int>,
     stats: Stats,
+    hideTimes: Boolean,
     onSetGoal: (Int) -> Unit,
     onBegin: () -> Unit,
     onEnd: () -> Unit,
@@ -92,6 +97,18 @@ fun TimerScreen(
 ) {
     val c = Waterline.colors
     val now = rememberNow(active != null)
+
+    /*
+     * Focus mode, and the escape hatch from it.
+     *
+     * `peekUntil` is keyed on the fast itself, so beginning one — or correcting
+     * its start — starts covered again rather than inheriting a peek from the
+     * fast before it. Expiry needs no timer of its own: `now` reticks every
+     * second while a fast is running, so the comparison simply stops being true.
+     */
+    var peekUntil by remember(active?.start) { mutableLongStateOf(0L) }
+    val peeking = peekUntil > now
+    val covered = active != null && hideTimes && !peeking
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
@@ -109,13 +126,13 @@ fun TimerScreen(
                         complete = active?.reachedGoal(now) == true,
                         modifier = Modifier.size(ringSize).aspectRatio(1f),
                     ) {
-                        RingFace(lang, fmt, active, goalHours, now)
+                        RingFace(lang, fmt, active, goalHours, now, covered)
                     }
                 }
 
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    coachLine(lang, fmt, active, now),
+                    coachLine(lang, fmt, active, now, covered),
                     style = MaterialTheme.typography.bodyMedium,
                     color = c.muted,
                     textAlign = TextAlign.Center,
@@ -128,15 +145,21 @@ fun TimerScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    GoalPicker(
-                        lang = lang,
-                        value = active?.goalHours ?: goalHours,
-                        choices = goalChoices,
-                        // A goal already in progress is fixed; the picker shows
-                        // it, greyed, rather than hiding what the fast is for.
-                        enabled = active == null,
-                        onPick = onSetGoal,
-                    )
+                    // The picker reads "16 hours" out loud, so in focus mode it
+                    // is put away rather than greyed, and the button takes the
+                    // whole row. It is locked during a fast either way.
+                    if (!covered) {
+                        GoalPicker(
+                            lang = lang,
+                            value = active?.goalHours ?: goalHours,
+                            choices = goalChoices,
+                            // A goal already in progress is fixed; the picker
+                            // shows it, greyed, rather than hiding what the
+                            // fast is for.
+                            enabled = active == null,
+                            onPick = onSetGoal,
+                        )
+                    }
                     Button(
                         onClick = if (active == null) onBegin else onEnd,
                         modifier = Modifier.weight(1f).height(50.dp),
@@ -156,18 +179,41 @@ fun TimerScreen(
 
                 if (active != null) {
                     Spacer(Modifier.height(14.dp))
-                    Text(
-                        Strings.t(
-                            lang, "controls.startedAt",
-                            "start" to fmt.dateTime(active.start),
-                            "goal" to active.goalHours,
-                            "goalAt" to goalAtLabel(fmt, active),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = c.faint,
-                        textAlign = TextAlign.Center,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // "Started … · 16h goal at …" is three of the four numbers
+                    // focus mode exists to hide, so the whole line goes. Edit
+                    // start and Discard stay reachable.
+                    if (!covered) {
+                        Text(
+                            Strings.t(
+                                lang, "controls.startedAt",
+                                "start" to fmt.dateTime(active.start),
+                                "goal" to active.goalHours,
+                                "goalAt" to goalAtLabel(fmt, active),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = c.faint,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    // Three buttons in Korean overflow a 320dp phone; wrapping
+                    // is cheaper than shortening any of the labels.
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        // Offered whenever focus mode is armed — including
+                        // while peeking, where it becomes the way back under.
+                        if (hideTimes) {
+                            TextButton(onClick = {
+                                peekUntil = if (peeking) 0L else System.currentTimeMillis() + PEEK_MS
+                            }) {
+                                Text(
+                                    Strings.t(lang, if (covered) "btn.peek" else "btn.hideAgain"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = c.accent,
+                                )
+                            }
+                        }
                         TextButton(onClick = onEditStart) {
                             Text(
                                 Strings.t(lang, "btn.editStart"),
@@ -194,10 +240,18 @@ fun TimerScreen(
 }
 
 @Composable
-private fun RingFace(lang: Lang, fmt: Format, active: ActiveFast?, goalHours: Int, now: Long) {
+private fun RingFace(
+    lang: Lang,
+    fmt: Format,
+    active: ActiveFast?,
+    goalHours: Int,
+    now: Long,
+    covered: Boolean,
+) {
     val c = Waterline.colors
     val elapsed = active?.elapsed(now) ?: 0L
     val stage = active?.let { stageAt(elapsed / 3.6e6).current }
+    val meta = ringMeta(lang, fmt, active, goalHours, now, covered)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -213,27 +267,44 @@ private fun RingFace(lang: Lang, fmt: Format, active: ActiveFast?, goalHours: In
         )
         Spacer(Modifier.height(3.dp))
         Text(
-            fmt.clock(elapsed),
+            if (covered && active != null) {
+                Strings.t(lang, "ring.percent", "pct" to active.percent(now))
+            } else {
+                fmt.clock(elapsed)
+            },
             style = MaterialTheme.typography.displayLarge,
             fontSize = 36.sp,
             color = c.text,
             maxLines = 1,
         )
-        Spacer(Modifier.height(3.dp))
-        Text(
-            text = ringMeta(lang, fmt, active, goalHours, now),
-            style = MaterialTheme.typography.bodySmall,
-            color = c.faint,
-            maxLines = 2,
-            textAlign = TextAlign.Center,
-        )
+        // Covered, the only line left worth printing is the one with no number
+        // in it — and there isn't one until the goal is met.
+        if (meta != null) {
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = meta,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (covered) c.win else c.faint,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
-private fun ringMeta(lang: Lang, fmt: Format, active: ActiveFast?, goalHours: Int, now: Long): String {
+private fun ringMeta(
+    lang: Lang,
+    fmt: Format,
+    active: ActiveFast?,
+    goalHours: Int,
+    now: Long,
+    covered: Boolean,
+): String? {
     if (active == null) return Strings.t(lang, "ring.readyMeta", "goal" to goalHours)
+    val reached = active.reachedGoal(now)
+    if (covered) return if (reached) Strings.t(lang, "ring.goalMet") else null
     val elapsed = active.elapsed(now)
-    return if (active.reachedGoal(now)) {
+    return if (reached) {
         Strings.t(
             lang, "ring.past",
             "time" to fmt.duration(elapsed - active.goalMs), "goal" to active.goalHours,
@@ -243,15 +314,20 @@ private fun ringMeta(lang: Lang, fmt: Format, active: ActiveFast?, goalHours: In
     }
 }
 
-private fun coachLine(lang: Lang, fmt: Format, active: ActiveFast?, now: Long): String {
+private fun coachLine(lang: Lang, fmt: Format, active: ActiveFast?, now: Long, covered: Boolean): String {
     if (active == null) return Strings.t(lang, quoteKeyOfTheHour(now))
     val elapsed = active.elapsed(now)
     val next = stageAt(elapsed / 3.6e6).next ?: return Strings.t(lang, "coach.pastAll")
-    return Strings.t(
-        lang, "coach.until",
-        "time" to fmt.countdown(next.hour * 3_600_000L - elapsed),
-        "stage" to Strings.t(lang, next.titleKey),
-    )
+    val stage = Strings.t(lang, next.titleKey)
+    return if (covered) {
+        Strings.t(lang, "coach.next", "stage" to stage)
+    } else {
+        Strings.t(
+            lang, "coach.until",
+            "time" to fmt.countdown(next.hour * 3_600_000L - elapsed),
+            "stage" to stage,
+        )
+    }
 }
 
 /** "14:30" on the same day, "Tue, 12 Aug 14:30" when the goal is tomorrow. */
