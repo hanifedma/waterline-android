@@ -95,7 +95,18 @@ class WaterlineViewModel(app: Application) : AndroidViewModel(app) {
         say(t("toast.startUpdated"))
     }
 
+    /**
+     * The timer's picker is disabled during a fast, but the one in Settings is
+     * not — and repo.setGoal() refuses while a fast is running. Refusing
+     * silently meant the row snapped back to the old value with no explanation,
+     * *and* the device mirror was written anyway, leaving prefs disagreeing
+     * with the synced setting until the next snapshot corrected it.
+     */
     fun setGoal(hours: Int) {
+        if (state.value.active != null) {
+            say(t("goal.locked"))
+            return
+        }
         repo.setGoal(hours)
         prefs.goalHours = hours
     }

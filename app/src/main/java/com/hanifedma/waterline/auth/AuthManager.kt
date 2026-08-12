@@ -27,8 +27,26 @@ import java.io.IOException
  */
 object FirebaseGate {
 
-    fun available(context: Context): Boolean =
-        BuildConfig.FIREBASE_CONFIGURED && FirebaseApp.getApps(context).isNotEmpty()
+    /**
+     * The two halves are logged apart, because they fail for opposite reasons
+     * and the user-facing message deliberately says neither: the first means
+     * this APK was built from a checkout with no google-services.json, the
+     * second means it was built with one and Firebase still didn't come up on
+     * this particular device.
+     */
+    fun available(context: Context): Boolean {
+        if (!BuildConfig.FIREBASE_CONFIGURED) {
+            Log.i(GATE_TAG, "Built without app/google-services.json — local mode only.")
+            return false
+        }
+        val started = FirebaseApp.getApps(context).isNotEmpty()
+        if (!started) {
+            Log.w(GATE_TAG, "google-services.json was present at build time, but FirebaseApp did not initialise.")
+        }
+        return started
+    }
+
+    private const val GATE_TAG = "FirebaseGate"
 
     /**
      * The OAuth *web* client id, which is what Google sign-in on Android

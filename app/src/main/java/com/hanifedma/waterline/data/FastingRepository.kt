@@ -293,8 +293,19 @@ class FastingRepository(
     /** The goal the picker should show when nothing is running. */
     fun defaultGoal(): Int = _state.value.settings.goalHours.takeIf { it > 0 } ?: prefs.goalHours
 
-    suspend fun signIn(context: Context): String? =
-        authManager?.signIn(context) ?: "setup.needConfig"
+    /**
+     * @return null when sign-in succeeded, otherwise a Strings key to show.
+     *
+     * Written out rather than as `authManager?.signIn(context) ?: key`, which
+     * looks equivalent and is not: AuthManager.signIn returns null to mean
+     * *success*, so the elvis fired on every successful sign-in and reported a
+     * configuration error to someone who had just signed in perfectly well.
+     * Two different nulls, one operator, and no type error to catch it.
+     */
+    suspend fun signIn(context: Context): String? {
+        val manager = authManager ?: return "setup.needConfig"
+        return manager.signIn(context)
+    }
 
     suspend fun signOut(context: Context) {
         authManager?.signOut(context)

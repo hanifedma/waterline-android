@@ -51,7 +51,26 @@ class CloudStore(
         var userCached = true
         var fastsCached = true
 
+        /*
+         * Nothing is published until the user document has answered once.
+         *
+         * The running fast and the settings live on that document; the fasts
+         * collection knows nothing about either. These are two independent
+         * listeners with no ordering guarantee, so if the collection answers
+         * first an ungated emit says "no fast is running, focus mode is off" —
+         * and the repository acts on it immediately, tearing down the ongoing
+         * notification, stopping the foreground service and arming the idle
+         * nudge, all for a fast that never stopped. Milliseconds later the user
+         * document lands and it is all built again.
+         *
+         * The flag is set even when the document errors, so a listener that can
+         * never answer degrades to showing the fasts rather than hanging on the
+         * splash for ever.
+         */
+        var userAnswered = false
+
         fun emit() {
+            if (!userAnswered) return
             trySend(StoreSnapshot(FastingState(active, fasts, settings), userCached || fastsCached))
         }
 
@@ -59,12 +78,15 @@ class CloudStore(
             if (err != null) {
                 Log.e(TAG, "user listener failed", err)
                 onError("err.auth.network")
+                userAnswered = true
+                emit()
                 return@addSnapshotListener
             }
             if (snap == null) return@addSnapshotListener
             active = readActive(snap)
             settings = readSettings(snap)
             userCached = snap.metadata.isFromCache
+            userAnswered = true
             emit()
         }
 

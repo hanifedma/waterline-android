@@ -207,7 +207,10 @@ object Strings {
         "err.auth.noAccount" to "No Google account on this device.",
         "err.auth.network" to "No connection. Local mode still works.",
         "err.auth.generic" to "Sign-in failed. Check the SHA-1 fingerprint in your Firebase project.",
-        "setup.needConfig" to "Add app/google-services.json and rebuild to turn on sync.",
+        // Whoever sees this installed an APK, not a checkout — so it says what
+        // is true for them, not what a developer would type next. The build
+        // instructions live in the README, and the reason is logged.
+        "setup.needConfig" to "Sync isn't available in this copy of Waterline. Everything still works, saved on this device.",
 
         // --- settings ---
         "settings.heading" to "Settings",
@@ -476,7 +479,7 @@ object Strings {
         "err.auth.noAccount" to "이 기기에 Google 계정이 없습니다.",
         "err.auth.network" to "연결할 수 없습니다. 로컬 모드는 계속 작동합니다.",
         "err.auth.generic" to "로그인에 실패했습니다. Firebase 프로젝트의 SHA-1 지문을 확인하세요.",
-        "setup.needConfig" to "동기화를 사용하려면 app/google-services.json을 추가하고 다시 빌드하세요.",
+        "setup.needConfig" to "이 버전의 Waterline에서는 동기화를 사용할 수 없습니다. 모든 기능은 그대로 작동하며 데이터는 이 기기에 저장됩니다.",
 
         // --- settings ---
         "settings.heading" to "설정",
