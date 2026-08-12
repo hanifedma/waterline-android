@@ -319,6 +319,31 @@ android" field, however tempting.
 > its signing certificate, not by a secret. Skip it and sign-in fails with a
 > vague error even though everything else looks right.
 
+### 3. What the account sheet calls you
+
+Tap **Sign in** and Google's sheet says *"Choose an account to continue to
+waterline-af54d.firebaseapp.com"* — a project id, at the moment someone is
+deciding whether to hand over their Google account.
+
+That string is not the Android app's name and not something this code sets.
+Credential Manager asks for a token using the **web** client id
+(`FirebaseGate.webClientId`, below), so the sheet shows the *project's* OAuth
+brand — the same brand, and the same sentence, that the web app gets. Google
+prints the domain instead of the name because it will not display an unverified
+app's name.
+
+Fix it once, in the **Google Cloud console → Google Auth Platform → Branding**:
+set **App name** to `Waterline`, plus a support email, home page and privacy
+policy URL. Both clients change together. Google shows a verified name only, so
+if the sheet still reads as a domain afterwards, the rest of the path —
+publishing the brand and submitting it for verification — is written up in the
+web repo under **"Make the sign-in dialog say your name"**.
+
+One thing there does *not* carry over: the web app can dodge the whole question
+by serving sign-in from a domain you own, and Android cannot. `authDomain` is a
+web-SDK setting; Credential Manager never reads it. On a phone the brand name is
+the only lever.
+
 ---
 
 ## Adaptive layout
