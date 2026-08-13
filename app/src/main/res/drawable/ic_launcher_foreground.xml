@@ -2,9 +2,13 @@
 <!--
   The web app's drop, redrawn as a vector.
 
-  Adaptive icons are 108×108 with only the middle 72×72 guaranteed visible, so
-  the drop is scaled ×2.5 about its own centre (16, 15 in the source's 32-unit
-  box) and dropped on the centre of the canvas: 16 × 2.5 + 14 = 54.
+  Adaptive icons are 108×108 with only the middle 72×72 guaranteed visible, and
+  of that the guidelines keep a 66dp circle for the mark itself. Filling that
+  circle to its edge is legal but looks oversized on a home screen, where every
+  neighbour leaves room — so the drop is scaled ×1.9 about its own centre
+  (16, 15 in the source's 32-unit box) and dropped on the centre of the canvas:
+  16 × 1.9 + 23.6 = 54. That makes it 35 × 47dp, sitting inside the 66dp circle
+  with room to spare rather than pressing against it.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -12,10 +16,10 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="2.5"
-        android:scaleY="2.5"
-        android:translateX="14"
-        android:translateY="16.5">
+        android:scaleX="1.9"
+        android:scaleY="1.9"
+        android:translateX="23.6"
+        android:translateY="25.5">
         <path
             android:fillColor="@color/accent"
             android:pathData="M16,2.5c5.4,6.2 9.2,11 9.2,15.6A9.2,9.2 0,0 1,16 27.3a9.2,9.2 0,0 1,-9.2 -9.2C6.8,13.5 10.6,8.7 16,2.5Z" />
